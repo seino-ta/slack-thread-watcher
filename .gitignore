@@ -1,0 +1,24 @@
+# Node modules & dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Runtime artifacts
+dist/
+build/
+coverage/
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# DB
+cooldown_state.csv
