@@ -23,23 +23,43 @@ npm install
 ```
 
 ### 2. Slack アプリの準備
-1. [https://api.slack.com/apps](https://api.slack.com/apps) で新規アプリを作成（From scratch）。
-2. **App-Level Token** を発行し、スコープ `connections:write` を付与 → 値を `SLACK_APP_TOKEN` として控える。
-3. **Bot Token Scopes** に `chat:write` と `channels:history`（必要なら `users:read`）を追加。
-4. **Event Subscriptions** を有効化し、Bot イベントに `message.channels` を登録。
-5. **Socket Mode** を ON にする。
-6. ワークスペースへインストールし、表示される Bot User OAuth Token を `SLACK_BOT_TOKEN` として控える。
-7. 監視対象チャンネルそれぞれで `/invite @Bot名` を実行し、ボットを参加させる。
+1. [https://api.slack.com/apps](https://api.slack.com/apps) で`Create New App`で をクリック。  
+  ![Slack app create](docs/images/create-app.png)  
+2. `From a manifest` を選択する。  
+  ![Select From a manifest](docs/images/create-app-from-manifest.png)
+3. `Workspace` を選択し、 `Next` をクリックする。  
+  ![Select workspace](docs/images/select-workspace.png)
+4. **JSON** に `manifest.json` を貼り付けて `Next` をクリックする。  
+  ![Set manifest](docs/images/set-manifest.png)
+5. `Create` をクリックする。  
+  ![Basic information](docs/images/review-app.png)
+6. メニューから `Basic Information` を選択し、`App-Lelve Tokens` の `Generate Token and Scopes` をクリックする。  
+  ![Basic information](docs/images/generate-app-token.png)
+7. ダイアログ上で `scope` に `connections:write` を追加し、 `Generate` をクリックする。※Token Nameは任意  
+  ![App token setting](docs/images/set-app-token.png)
+8. ダイアログ上で `Copy` をクリックしてその値を控える。※後述のSLACK_APP_TOKENに利用  
+  ![App token copy](docs/images/copy-token.png)
+9. `Install App` を起動して `Install to Workspaceの名前` をクリックする。  
+  ![Install App](docs/images/install-app.png)
+10. `許可する` をクリックする。  
+  ![Install App Allow](docs/images/install-app-allow.png)
+11. `Copy` をクリックしてその値を控える。※後述のSLACK_BOT_TOKENに利用  
+  ![Get bot user token](docs/images/get-bot-user-token.png)
+12. `@Slack Patrol` でメンションをする。  
+  ![Mention app](docs/images/mention-app.png)
+13. `追加する` をクリックする。  
+  ![Add bot](docs/images/add-bot.png)
+14. アプリが追加されたことを確認する。  
+  ![Invite app result](docs/images/invite-app-result.png)
+
 
 > スコープやイベント設定を変更した場合は、再度ワークスペースへインストールしてトークンを更新してください。
 
 ### 3. 環境変数の設定
-1. `.env.example` をコピーして `.env` を作成。
-2. `SLACK_BOT_TOKEN` と `SLACK_APP_TOKEN` に取得した値を設定。
+1. `.env.example` をコピーして `.env` を作成する。
+2. `SLACK_BOT_TOKEN` と `SLACK_APP_TOKEN` に取得した値を設定する。
 3. ログ送信を使わない場合は `SHEETS_WEBHOOK_URL` を空のままにする。
-4. 調査用に詳細ログを見たい場合は `APP_ENV=development` や `LOG_LEVEL=debug` を設定するとデバッグログがファイル／コンソール双方に出力される。
-5. ログの出力先を変えたい場合は `LOG_FILE` にパスを指定（相対パスはプロジェクトルート基準）。
-6. ポートを変更したい場合は `PORT` を任意値に。
+4. ポートを変更したい場合は `PORT` を任意値に変更する。
 
 ### 4. 監視設定ファイルの調整
 - `config.json`
