@@ -23,7 +23,7 @@ npm install
 ```
 
 ### 2. Slack アプリの準備
-1. [https://api.slack.com/apps](https://api.slack.com/apps) で`Create New App`で をクリック。  
+1. [https://api.slack.com/apps](https://api.slack.com/apps) で`Create New App` をクリック。  
   ![Slack app create](docs/images/create-app.png)  
 2. `From a manifest` を選択する。  
   ![Select From a manifest](docs/images/create-app-from-manifest.png)
@@ -45,7 +45,7 @@ npm install
   ![Install App Allow](docs/images/install-app-allow.png)
 11. `Copy` をクリックしてその値を控える。※後述のSLACK_BOT_TOKENに利用  
   ![Get bot user token](docs/images/get-bot-user-token.png)
-12. `@Slack Patrol` でメンションをする。  
+12. `@Slack Patrol` でメンションをする。※もしくは `/invite @Slack Patrol`  
   ![Mention app](docs/images/mention-app.png)
 13. `追加する` をクリックする。  
   ![Add bot](docs/images/add-bot.png)
@@ -195,5 +195,7 @@ npm start
 ├─ .env.example
 ├─ lib/（判定ロジックなどのユーティリティ）
 ├─ tests/（vitest のテストケース）
+├─ docs/images/（セットアップ手順のスクリーンショット）
+├─ manifest.json（Slack App Manifest）
 └─ logs/（起動時に自動作成されるログディレクトリ）
 ```
