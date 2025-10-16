@@ -173,5 +173,7 @@ npm start
 ├─ README.md（本書）
 ├─ .env（ローカル専用・コミット不要）
 ├─ .env.example
+├─ lib/（判定ロジックなどのユーティリティ）
+├─ tests/（vitest のテストケース）
 └─ logs/（起動時に自動作成されるログディレクトリ）
 ```
