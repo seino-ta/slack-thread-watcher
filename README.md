@@ -81,6 +81,8 @@ npm start
 - ログは標準出力とファイルに同時出力されます。既定では `logs/app.log`、`APP_ENV=development` の場合は `logs/dev.log` に追記されます（存在しない場合は起動時にディレクトリごと作成）。
 - ログレベルは `LOG_LEVEL` 環境変数（`error` / `warn` / `info` / `debug`）か、`config.json` の `logging.level` で指定できます。環境変数が優先され、指定がなければ `APP_ENV=development` 時は `debug`、それ以外は `info` になります。
 - 出力先ファイルは `LOG_FILE` 環境変数、または `config.json` の `logging.file` で変更可能です。相対パスはプロジェクトルート基準で解釈されます。
+- ログ出力自体を止めたい場合は `config.logging.enabled` を `false` にするか、`LOG_DISABLED=1` を設定してください。
+- プライバシー保護のため、メッセージ本文はデフォルトではログに記録されません。検証などで本文を出力したい場合は `config.logging.include_message` を `true` にするか `LOG_INCLUDE_MESSAGE=1` を設定します。
 - 調査時は `npm start --silent` のように起動して `tail -f logs/app.log` でファイルを監視すると便利です。大量のデバッグログが不要な場合は `LOG_LEVEL=info` で抑制できます。
 
 ## テスト
@@ -122,6 +124,8 @@ npm start
 - `APP_ENV`：`development` を指定するとデバッグログが有効になり、既定のログファイルが `logs/dev.log` へ切り替わります。未指定時は `production` として扱われます。
 - `LOG_LEVEL`：ログレベルを強制的に指定（`error` / `warn` / `info` / `debug`）。未指定時は `APP_ENV` や `config.json` に従います。
 - `LOG_FILE`：ログファイルのパス。相対パスはプロジェクトルート基準、絶対パスも指定可能。
+- `LOG_DISABLED`：`1` / `true` などを指定するとロギングを完全に無効化します。
+- `LOG_INCLUDE_MESSAGE`：`1` / `true` などを指定するとログにメッセージ本文（先頭120文字）を含めます。指定が無い場合は本文を記録しません。
 - `SHEETS_WEBHOOK_URL`：Apps Script など外部ログ集約先の HTTPS URL。空欄にするとログ送信を無効化。
 - `PORT`：`app.start()` の待受ポート。Socket Mode なので外部公開不要だが、Procfile 等で指定する場合に利用。
 
@@ -135,8 +139,10 @@ npm start
 - `rules.no_mention`：`true` で @なし判定を有効化。`false` にすれば無効。
 - `rules.non_thread_reply`：スレッド外返信ヒューリスティックの有効／無効。
 - `rules.flood`：連投判定の有効／無効。
+- `logging.enabled`：`false` にするとロガーを完全に停止します。未指定時は有効。
 - `logging.level`：既定のログレベル。`error` / `warn` / `info` / `debug` のいずれか。環境変数 `LOG_LEVEL` による指定がある場合はそちらが優先されます。
 - `logging.file`：ログ出力先ファイル。相対パスはプロジェクトルート基準で解釈され、存在しない場合は起動時に作成されます。
+- `logging.include_message`：`true` でログへメッセージ本文（先頭120文字）を含めます。指定が無い／`false` の場合は本文を記録しません。
 
 #### 設定サンプル
 ```json
@@ -153,8 +159,10 @@ npm start
     "flood": true
   },
   "logging": {
+    "enabled": true,
     "file": "logs/app.log",
-    "level": "info"
+    "level": "info",
+    "include_message": false
   }
 }
 ```

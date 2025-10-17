@@ -24,6 +24,14 @@ const messages = loadJson("messages.json");
 
 const { App } = slackBolt;
 
+function parseEnvBoolean(value) {
+  if (value === undefined || value === null) return null;
+  const normalized = String(value).trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return null;
+}
+
 function validateRequiredEnv() {
   const requiredKeys = ["SLACK_BOT_TOKEN", "SLACK_APP_TOKEN"];
   const missing = requiredKeys.filter(
@@ -78,6 +86,18 @@ function validateConfigSchema(cfg) {
     if (!cfg.logging || typeof cfg.logging !== "object") {
       errors.push("logging はオブジェクトで指定してください");
     } else {
+      if (
+        Object.prototype.hasOwnProperty.call(cfg.logging, "enabled") &&
+        typeof cfg.logging.enabled !== "boolean"
+      ) {
+        errors.push("logging.enabled は true / false を指定してください");
+      }
+      if (
+        Object.prototype.hasOwnProperty.call(cfg.logging, "include_message") &&
+        typeof cfg.logging.include_message !== "boolean"
+      ) {
+        errors.push("logging.include_message は true / false を指定してください");
+      }
       if (cfg.logging.level !== undefined && typeof cfg.logging.level !== "string") {
         errors.push("logging.level は文字列で指定してください");
       }
@@ -154,41 +174,70 @@ function createLogger(activeLevel, filePath) {
   };
 }
 
+function createNoopLogger() {
+  const noop = () => {};
+  return {
+    level: "off",
+    error: noop,
+    warn: noop,
+    info: noop,
+    debug: noop,
+  };
+}
+
 const appEnv = (
   process.env.APP_ENV || process.env.NODE_ENV || "production"
 ).toLowerCase();
 const isDevMode = appEnv === "development";
 const loggingConfig = config.logging ?? {};
-const configuredLevel = (
-  process.env.LOG_LEVEL ||
-  loggingConfig.level ||
-  (isDevMode ? "debug" : "info")
-).toLowerCase();
-const resolvedLevel = Object.prototype.hasOwnProperty.call(
-  LOG_LEVEL_PRIORITY,
-  configuredLevel
-)
-  ? configuredLevel
-  : isDevMode
-  ? "debug"
-  : "info";
-const logFileSetting =
-  process.env.LOG_FILE ||
-  loggingConfig.file ||
-  (isDevMode ? "logs/dev.log" : "logs/app.log");
-const logFilePath = path.isAbsolute(logFileSetting)
-  ? logFileSetting
-  : path.join(__dirname, logFileSetting);
-const logDir = path.dirname(logFilePath);
-if (!existsSync(logDir)) {
-  mkdirSync(logDir, { recursive: true });
+const logDisabledByConfig = loggingConfig.enabled === false;
+const logDisabledByEnv = parseEnvBoolean(process.env.LOG_DISABLED);
+const loggingDisabled =
+  logDisabledByConfig || (logDisabledByEnv === null ? false : logDisabledByEnv);
+const logIncludeMessageEnv = parseEnvBoolean(process.env.LOG_INCLUDE_MESSAGE);
+const logIncludeMessage =
+  logIncludeMessageEnv !== null
+    ? logIncludeMessageEnv
+    : typeof loggingConfig.include_message === "boolean"
+    ? loggingConfig.include_message
+    : false;
+let resolvedLevel = "off";
+let logFilePath = null;
+let logger = createNoopLogger();
+
+if (!loggingDisabled) {
+  const configuredLevel = (
+    process.env.LOG_LEVEL ||
+    loggingConfig.level ||
+    (isDevMode ? "debug" : "info")
+  ).toLowerCase();
+  resolvedLevel = Object.prototype.hasOwnProperty.call(
+    LOG_LEVEL_PRIORITY,
+    configuredLevel,
+  )
+    ? configuredLevel
+    : isDevMode
+    ? "debug"
+    : "info";
+  const logFileSetting =
+    process.env.LOG_FILE ||
+    loggingConfig.file ||
+    (isDevMode ? "logs/dev.log" : "logs/app.log");
+  logFilePath = path.isAbsolute(logFileSetting)
+    ? logFileSetting
+    : path.join(__dirname, logFileSetting);
+  const logDir = path.dirname(logFilePath);
+  if (!existsSync(logDir)) {
+    mkdirSync(logDir, { recursive: true });
+  }
+  logger = createLogger(resolvedLevel, logFilePath);
+  logger.info("ロガー初期化", {
+    env: appEnv,
+    level: resolvedLevel,
+    file: logFilePath,
+    includeMessage: logIncludeMessage,
+  });
 }
-const logger = createLogger(resolvedLevel, logFilePath);
-logger.info("ロガー初期化", {
-  env: appEnv,
-  level: resolvedLevel,
-  file: logFilePath,
-});
 
 // Bolt初期化（Socket Mode）
 const app = new App({
@@ -327,19 +376,18 @@ async function appendLog(rule, event, extra = {}) {
     return;
   }
   try {
-    await axios.post(
-      url,
-      {
-        timestamp: new Date().toISOString(),
-        rule,
-        user: event.user,
-        channel: event.channel,
-        ts: event.ts,
-        text: (event.text || "").slice(0, 500),
-        ...extra,
-      },
-      { timeout: 5000 },
-    );
+    const payload = {
+      timestamp: new Date().toISOString(),
+      rule,
+      user: event.user,
+      channel: event.channel,
+      ts: event.ts,
+      ...extra,
+    };
+    if (logIncludeMessage) {
+      payload.text = (event.text || "").slice(0, 500);
+    }
+    await axios.post(url, payload, { timeout: 5000 });
     logger.debug("スプレッドシート用ログを送信", {
       rule,
       user: event.user,
@@ -420,14 +468,15 @@ function registerProcessHandlers() {
 app.event("message", async ({ event, client, logger: boltLogger }) => {
   try {
     const text = event.text || "";
-    const snippet =
-      text.length > 120 ? `${text.slice(0, 117)}...` : text;
     const baseMeta = {
       user: event.user,
       channel: event.channel,
       ts: event.ts,
-      snippet,
     };
+    if (logIncludeMessage) {
+      baseMeta.snippet =
+        text.length > 120 ? `${text.slice(0, 117)}...` : text;
+    }
 
     logger.debug("メッセージイベントを受信", baseMeta);
 

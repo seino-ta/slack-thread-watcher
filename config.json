@@ -15,6 +15,7 @@
     },
     "logging": {
         "file": "logs/app.log",
-        "level": "info"
+        "level": "info",
+        "include_message": false
     }
 }
