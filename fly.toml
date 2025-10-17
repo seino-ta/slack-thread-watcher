@@ -1,0 +1,15 @@
+# fly.toml
+app = "slack-socket-patrol"
+primary_region = "nrt"
+
+[build]
+  dockerfile = "Dockerfile"
+
+# Socket Mode は受信ポート不要。services/http_service は定義しない
+
+[processes]
+  app = "node index.js"
+
+[vm]
+  size = "shared-cpu-1x"
+  memory = "256MB"

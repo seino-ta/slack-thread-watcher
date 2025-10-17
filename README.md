@@ -97,6 +97,55 @@ npm start
    - `cooldown_state.csv` と `logs/` をマウントしておくと、通知クールダウンの状態やログがコンテナ再起動後も保持されます。
    - `APP_ENV` や `LOG_LEVEL` など任意の環境変数も `--env` で追加できます。
 
+#### Fly.io でのデプロイ
+Fly.io へデプロイすると常時稼働させやすくなります。恒久的な無料枠はなく、ボリュームを含む各リソースに従量課金が発生する点に注意してください。
+
+1. Fly.io CLI のインストールとログイン
+   ```bash
+   brew install flyctl      # macOS の例
+   fly auth login
+   ```
+2. アプリ初期化  
+   既存の `Dockerfile` を利用してアプリを作成します。デプロイは後で行うため `--no-deploy` を付けます。
+   ```bash
+   fly launch --no-deploy --copy-config
+   ```
+   - 対話中「Would you like to deploy now?」は `n` を選択してください。
+   - `fly.toml` が生成されます（例は `fly.toml` を参照）。
+3. シークレット設定  
+   Slack トークンなどは Fly Secrets に登録します。
+   ```bash
+   fly secrets set \
+     SLACK_BOT_TOKEN="xoxb-..." \
+     SLACK_APP_TOKEN="xapp-..." \
+     APP_ENV=production \
+     LOG_LEVEL=info
+   ```
+   `.env` の他パラメータがあれば同様に追加してください。
+4. 永続化が必要な場合（任意）  
+   クールダウン状態やログを残すにはボリュームを作成し、`fly.toml` にマウントを追記します。ボリュームは課金対象です。
+   ```bash
+   fly volumes create bot_data --size 1 -r nrt
+   ```
+   `fly.toml` に以下を追加します。
+   ```toml
+   [[mounts]]
+     source = "bot_data"
+     destination = "/app/runtime"
+   ```
+   初回のみ次のコマンドで永続ディレクトリをリンクします。
+   ```bash
+   fly ssh console -C 'mkdir -p /app/runtime && \
+   ln -sf /app/runtime/cooldown_state.csv /app/cooldown_state.csv && \
+   ln -snf /app/runtime/logs /app/logs'
+   ```
+5. デプロイとログ確認
+   ```bash
+   fly deploy
+   fly logs
+   ```
+   `⚡️ Slack Patrol Bot が起動しました` のログが流れれば正常に動作しています。
+
 ## ログ出力と調査モード
 - ログは標準出力とファイルに同時出力されます。既定では `logs/app.log`、`APP_ENV=development` の場合は `logs/dev.log` に追記されます（存在しない場合は起動時にディレクトリごと作成）。
 - ログレベルは `LOG_LEVEL` 環境変数（`error` / `warn` / `info` / `debug`）か、`config.json` の `logging.level` で指定できます。環境変数が優先され、指定がなければ `APP_ENV=development` 時は `debug`、それ以外は `info` になります。
@@ -219,8 +268,12 @@ npm start
 ├─ messages.json
 ├─ package.json / package-lock.json
 ├─ README.md（本書）
+├─ Dockerfile（コンテナビルド定義）
+├─ .dockerignore（Docker ビルドコンテキスト除外設定）
+├─ fly.toml（Fly.io 向けアプリ設定）
 ├─ .env（ローカル専用・コミット不要）
 ├─ .env.example
+├─ cooldown_state.csv（クールダウン保持用のシリアライズファイル）
 ├─ lib/（判定ロジックなどのユーティリティ）
 ├─ tests/（vitest のテストケース）
 ├─ docs/images/（セットアップ手順のスクリーンショット）
