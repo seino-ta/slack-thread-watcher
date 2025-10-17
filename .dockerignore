@@ -1,0 +1,8 @@
+.git
+.gitignore
+.env
+node_modules
+logs
+docs
+tests
+npm-debug.log*

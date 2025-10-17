@@ -77,6 +77,26 @@ npm start
 
 コンソールや `logs/app.log` に `⚡️ Slack Patrol Bot が起動しました` が出力されれば Socket Mode 接続が完了しています。テスト時は監視チャンネルで通常メッセージを投稿し、期待通りに Ephemeral 通知が届くか、必要に応じて `APP_ENV=development npm start` や `LOG_LEVEL=debug node index.js` のように起動して詳細ログを確認してください。
 
+#### Docker での実行
+1. ルートディレクトリで次のコマンドを実行し、コンテナイメージをビルドします。
+   ```bash
+   docker build -t slack-patrol-bot .
+   ```
+2. `.env` に Slack トークンなどをセットした上で、下記のように起動します（例）。
+   ```bash
+   docker run --rm \
+     --name slack-patrol-bot \
+     --env-file .env \
+     -v "$(pwd)/config.json:/app/config.json:ro" \
+     -v "$(pwd)/messages.json:/app/messages.json:ro" \
+     -v "$(pwd)/cooldown_state.csv:/app/cooldown_state.csv" \
+     -v "$(pwd)/logs:/app/logs" \
+     slack-patrol-bot
+   ```
+   - 設定ファイルをホスト側で編集したい場合は上記のようにボリュームマウントしてください（`:ro` を外せばコンテナ内からも書き換え可能）。
+   - `cooldown_state.csv` と `logs/` をマウントしておくと、通知クールダウンの状態やログがコンテナ再起動後も保持されます。
+   - `APP_ENV` や `LOG_LEVEL` など任意の環境変数も `--env` で追加できます。
+
 ## ログ出力と調査モード
 - ログは標準出力とファイルに同時出力されます。既定では `logs/app.log`、`APP_ENV=development` の場合は `logs/dev.log` に追記されます（存在しない場合は起動時にディレクトリごと作成）。
 - ログレベルは `LOG_LEVEL` 環境変数（`error` / `warn` / `info` / `debug`）か、`config.json` の `logging.level` で指定できます。環境変数が優先され、指定がなければ `APP_ENV=development` 時は `debug`、それ以外は `info` になります。
